@@ -1,7 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, throwError } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
+import { combineLatest, Observable, throwError } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
+import { ProductCategoryService } from '../product-categories/product-category.service';
 import { SupplierService } from '../suppliers/supplier.service';
 import { Product } from './product';
 
@@ -17,9 +18,30 @@ export class ProductService {
     catchError(this.handleError)
   );
 
+  /**
+   * combineLatest because it will emit any time any of the streams emits
+   */
+  productsWithCategory$ = combineLatest([
+    this.products$,
+    this.productCategoryService.productCategories$,
+  ]).pipe(
+    map(([products, categories]) =>
+      products.map(
+        (product) =>
+          ({
+            ...product,
+            price: product.price,
+            category: categories.find((c) => product.categoryId === c.id).name,
+            searchKey: [product.productName],
+          } as Product)
+      )
+    )
+  );
+
   constructor(
     private http: HttpClient,
-    private supplierService: SupplierService
+    private supplierService: SupplierService,
+    private productCategoryService: ProductCategoryService
   ) {}
 
   private fakeProduct(): Product {
