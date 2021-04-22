@@ -12,6 +12,7 @@ export class ProductListComponent {
   pageTitle = 'Product List';
   errorMessage = '';
   categories;
+  selectedCategoryId = 1; // Temporarily hardcoded until selector goes in
 
   products$ = this.productService.productsWithCategory$.pipe(
     map((products) =>
@@ -28,6 +29,16 @@ export class ProductListComponent {
       this.errorMessage = error;
       return EMPTY;
     })
+  );
+
+  productsSimpleFilter$ = this.productService.productsWithCategory$.pipe(
+    map((products) =>
+      products.filter((product) =>
+        this.selectedCategoryId
+          ? product.categoryId === this.selectedCategoryId
+          : true
+      )
+    )
   );
 
   constructor(private productService: ProductService) {}
