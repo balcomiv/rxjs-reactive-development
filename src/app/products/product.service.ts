@@ -38,6 +38,10 @@ export class ProductService {
     )
   );
 
+  selectedProduct$ = this.productsWithCategory$.pipe(
+    map((products) => products.find((product) => product.id === 5)) //  Fix Me -- Hardcoded for testing
+  );
+
   constructor(
     private http: HttpClient,
     private supplierService: SupplierService,
