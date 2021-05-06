@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
-import { EMPTY } from 'rxjs';
+import { BehaviorSubject, combineLatest, EMPTY } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { Product } from './product';
+import { ProductCategoryService } from '../product-categories/product-category.service';
 import { ProductService } from './product.service';
 
 @Component({
@@ -11,18 +11,17 @@ import { ProductService } from './product.service';
 export class ProductListComponent {
   pageTitle = 'Product List';
   errorMessage = '';
-  categories;
-  selectedCategoryId = 1; // Temporarily hardcoded until selector goes in
 
-  products$ = this.productService.productsWithCategory$.pipe(
-    map((products) =>
-      products.map(
-        (product) =>
-          ({
-            ...product,
-            price: product.price * 1.5,
-            searchKey: [product.productName],
-          } as Product)
+  private categorySelectedSubject = new BehaviorSubject<number>(0);
+  categorySelectedAction$ = this.categorySelectedSubject.asObservable();
+
+  products$ = combineLatest([
+    this.productService.productsWithCategory$,
+    this.categorySelectedAction$,
+  ]).pipe(
+    map(([products, selectedCategoryId]) =>
+      products.filter((product) =>
+        selectedCategoryId ? product.categoryId === selectedCategoryId : true
       )
     ),
     catchError((error) => {
@@ -31,23 +30,26 @@ export class ProductListComponent {
     })
   );
 
-  productsSimpleFilter$ = this.productService.productsWithCategory$.pipe(
-    map((products) =>
-      products.filter((product) =>
-        this.selectedCategoryId
-          ? product.categoryId === this.selectedCategoryId
-          : true
-      )
-    )
+  //  Create an action stream
+  //  Combine the action stream with the data stream
+  categories$ = this.productCategoryService.productCategories$.pipe(
+    catchError((err) => {
+      this.errorMessage = err;
+      return EMPTY;
+    })
   );
 
-  constructor(private productService: ProductService) {}
+  constructor(
+    private productService: ProductService,
+    private productCategoryService: ProductCategoryService
+  ) {}
 
   onAdd(): void {
     console.log('Not yet implemented');
   }
 
   onSelected(categoryId: string): void {
-    console.log('Not yet implemented');
+    //  Emit value to the action stream when action occurs
+    this.categorySelectedSubject.next(+categoryId);
   }
 }
