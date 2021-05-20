@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { combineLatest, Observable, throwError } from 'rxjs';
+import { BehaviorSubject, combineLatest, Observable, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { ProductCategoryService } from '../product-categories/product-category.service';
 import { SupplierService } from '../suppliers/supplier.service';
@@ -14,7 +14,8 @@ export class ProductService {
   private suppliersUrl = this.supplierService.suppliersUrl;
 
   products$ = this.http.get<Product[]>(this.productsUrl).pipe(
-    tap((data) => console.log('Products: ', JSON.stringify(data))),
+    // tap((data) => console.log('Products: ', JSON.stringify(data))),
+    tap((data) => console.log('Products: <HTTP Request>')),
     catchError(this.handleError)
   );
 
@@ -38,8 +39,16 @@ export class ProductService {
     )
   );
 
-  selectedProduct$ = this.productsWithCategory$.pipe(
-    map((products) => products.find((product) => product.id === 5)) //  Fix Me -- Hardcoded for testing
+  private productSelectedSubject = new BehaviorSubject<number>(0);
+  productSelectedAction$ = this.productSelectedSubject.asObservable();
+
+  selectedProduct$ = combineLatest([
+    this.productSelectedAction$,
+    this.productsWithCategory$,
+  ]).pipe(
+    map(([selectedProductId, products]) =>
+      products.find((product) => product.id === selectedProductId)
+    )
   );
 
   constructor(
@@ -48,17 +57,8 @@ export class ProductService {
     private productCategoryService: ProductCategoryService
   ) {}
 
-  private fakeProduct(): Product {
-    return {
-      id: 42,
-      productName: 'Another One',
-      productCode: 'TBX-0042',
-      description: 'Our new product',
-      price: 8.9,
-      categoryId: 3,
-      // category: 'Toolbox',
-      quantityInStock: 30,
-    };
+  selectedProductChanged(productId: number): void {
+    this.productSelectedSubject.next(productId);
   }
 
   private handleError(err: any): Observable<never> {
